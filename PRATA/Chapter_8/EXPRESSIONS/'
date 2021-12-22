@@ -1,0 +1,35 @@
+#include <stdio.h>
+int main(void)
+{
+	int top = 100;
+	float mediane = 50;
+	int guess = 50;
+	printf("Выберите целое число в интервале от 1 до 100. Я попробую угадать ");
+	printf("его.\nНажмите клавишу y, если моя догадка верна и ");
+	printf("\nклавишу '>' в если случае если больше, и '<' в случае если меньше.\n");
+	printf("Вашим числом является %d?\n", guess);
+	char response;
+	while ((response = getchar()) != 'y') 
+	{
+		float temp = guess / 2;
+		if (response == '<')
+		{
+			guess = temp
+		} 
+		else if (response == '>')
+		{
+			guess += temp;
+		}
+
+		printf("Ладно, тогда это %f?\n", );
+		if (response == 'n')
+			printf("Ладно, тогда это %d?\n", ++guess);
+		else
+			printf("Принимаются только варианты y или n.\n");
+		while (getchar() != '\n')
+			continue;
+	}
+
+	printf("Я знал, что у меня получится!\n");
+	return 0;
+}

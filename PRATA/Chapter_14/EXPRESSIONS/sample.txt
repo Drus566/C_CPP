@@ -1,0 +1,9 @@
+1 Andrey Lykov 5 2 1 
+2 Pavel Ylanow 4 1 2 
+3 Evegenii Shell 6 3 3 
+4 Nikolai Shell 3 1 1 
+5 Sergey Stud 6 4 4 
+6 Max Miganov 6 4 2 
+7 Dmitrii Frol 6 3 2
+8 Anatolii Efanov 8 5 2
+9 Tim Artemev 10 5 4
