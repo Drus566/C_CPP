@@ -5,6 +5,7 @@
 
 #define MAXNAME 40
 #define MAXPLACES 12 
+#define MAXFLIGHTS 4
 
 struct place {
 	int id;
@@ -14,93 +15,101 @@ struct place {
 	char lname[MAXNAME];
 };
 
-void init_places(struct place *);
+struct flight
+{
+	int id;
+	struct place places[MAXPLACES];
+};
 
+void init_places(struct place *);
+void init_flights(struct flight *);
+
+void show_menu(void);
+void show_main_menu(void);
+void open_flight(struct flight *);
+
+void confirm_place(struct place *);
 void show_free_places(struct place *);
 void show_count_free_places(struct place *);
 void show_reservationed_places(struct place places[MAXPLACES]);
 void reserve_place(struct place *);
 void unreserve_place(struct place *);
 
-void sort_place(void);
-void show_menu(void);
 char * s_gets(char *st, int n);
+
+void (*funcs[5])(struct place *);
 
 int main(void)
 {
+	
+	// Корректное отображение кодировки 
 	char *locale = setlocale(LC_ALL, "");
 
-	struct place places[MAXPLACES];
-
-	init_places(&places[0]);
-
-	FILE * file_places;
-
-	int size = sizeof(struct place);
-
-	if ((file_places = fopen("place.dat", "r+b")) == NULL)
+	// Открытие файла БД
+	FILE * file_flights;
+	if ((file_flights = fopen("flight.dat", "r+b")) == NULL)
 	{
-		fputs("Не удается открыть файл place.dat\n", stderr);
+		fputs("Не удается открыть файл flight.dat\n", stderr);
 		exit(1);
 	}
 
-	rewind(file_places);
+	// инициализация
+	struct flight flights[MAXFLIGHTS];
+	int size = sizeof(struct flight);
+	init_flights(&flights[0]);
 
-	puts("\nТекущее содержимое файла place.dat:\n");
-
-	int count_empty = 0;
-	for (int i = 0; i < MAXPLACES; i++) {
-		if (fread(&places[i], size, 1, file_places) == 1)
+	// Загрузка инфы из файла
+	rewind(file_flights);
+	puts("\nСписок рейсов:");
+	for (int k = 0; k < MAXFLIGHTS; k++)
+	{
+		int count_empty = 0;
+		if (fread(&flights[k], size, 1, file_flights) == 1)
 		{
-			if (places[i].busy == 1)
-				printf("\nID:%d BUSY:%d CONFIRM:%d\n FNAME: %s\n LNAME %s\n", places[i].id, places[i].busy, places[i].confirm, places[i].fname, places[i].lname);
-			else
-				++count_empty;
+			printf("\nРейс № %d:\n", flights[k].id);
+			for (int i = 0; i < MAXPLACES; i++) 
+			{
+				if (flights[k].places[i].busy == 1)
+					printf("\nID:%d BUSY:%d CONFIRM:%d\n FNAME: %s\n LNAME %s\n", flights[k].places[i].id, flights[k].places[i].busy, flights[k].places[i].confirm, flights[k].places[i].fname, flights[k].places[i].lname);
+				else
+					++count_empty;
+			}
+			if (count_empty == MAXPLACES)
+				printf("Рейс пуст...\n");
 		}
 	}
 
-	if (count_empty == MAXPLACES)
-		printf("Файл пуст...\n");
+	show_main_menu();
 
 	char choice;
-	show_menu();
-
-	int flag = 0;
-
 	while ((choice = getchar()) != 'f') {
-
-		while (getchar() != '\n')
-			continue;
 
 		switch (choice)
 		{
 			case 'a':
-				show_count_free_places(&places[0]);
-				break;
+				open_flight(&flights[0]);
+				break;	
 			case 'b':
-				show_free_places(&places[0]);
+				open_flight(&flights[1]);
 				break;
 			case 'c':
-				show_reservationed_places(places);
+				open_flight(&flights[2]);
 				break;
 			case 'd':
-				reserve_place(&places[0]);
+				open_flight(&flights[3]);
 				break;
-			case 'e':
-				unreserve_place(&places[0]);
-				break;
-			default:
-				printf("Вопрос озадачил!\n");
 		}
+		show_main_menu();
 
-		show_menu();
+		while (getchar() != '\n')
+			continue;
 	}
 
-	rewind(file_places);
-	fwrite(places, size * MAXPLACES, 1, file_places);
+	rewind(file_flights);
+	fwrite(flights, size * MAXFLIGHTS, 1, file_flights);
 
 	puts("\nПрограмма завершена.\n");
-	fclose(file_places);
+	fclose(file_flights);
 
 	return 0; 
 }
@@ -143,12 +152,54 @@ void unreserve_place(struct place * ptr)
 		}
 
 		(ptr + r_place)->busy = 0;
+		(ptr + r_place)->confirm = 0;
 		(ptr + r_place)->fname[0] = '\0';
 		(ptr + r_place)->lname[0] = '\0';
 
 		printf("Место разбронировано...\n");
 
 		printf("\nВведите номер места для разбронирования...\n");
+		printf("Нажмите [q] чтобы закончить ввод.\n\n");
+	}
+
+	while (getchar() != '\n')
+		continue;
+}
+
+void confirm_place(struct place * ptr)
+{
+	printf("\nВведите номер места для подтверждения.\n");
+	printf("Нажмите [q] чтобы закончить ввод.\n\n");
+
+	int r_place;	
+
+	while (scanf("%d", &r_place) == 1 && r_place != 'q')
+	{
+		while (getchar() != '\n')
+			continue;
+
+		--r_place;
+
+		if (r_place < 0 || r_place > 11) {
+			printf("Существуют только 1-12 места\n");
+			printf("Введите номер места.\n");	
+			printf("Нажмите [q] чтобы закончить ввод.\n\n");
+			continue;
+		}
+
+		if ((ptr + r_place)->confirm == 1) 
+		{
+			printf("Место уже подтверждено...\n");
+			printf("Введите номер места.\n");	
+			printf("Нажмите [q] чтобы закончить ввод.\n\n");
+			continue;
+		}
+
+		(ptr + r_place)->confirm = 1;
+
+		printf("Место подтверждено...\n");
+
+		printf("\nВведите номер места.\n");
 		printf("Нажмите [q] чтобы закончить ввод.\n\n");
 	}
 
@@ -186,7 +237,7 @@ void reserve_place(struct place * ptr)
 		}
 
 		(ptr + r_place)->busy = 1;
-		(ptr + r_place)->busy = 1;
+
 		printf("Введите имя:\n");
 		s_gets((ptr + r_place)->fname, MAXNAME);
 
@@ -211,7 +262,6 @@ void show_reservationed_places(struct place places[MAXPLACES])
 
 	for (int i = 0; i < MAXPLACES; i++)
 	{
-
 		if (i == 0)
 		{
 			t_places[i] = places[i];
@@ -221,7 +271,11 @@ void show_reservationed_places(struct place places[MAXPLACES])
 		for (int j = i - 1; j >= 0; j--)
 		{
 			if (t_places[j].fname[0] > places[i].fname[0])
+			{
 				t_places[j + 1] = t_places[j];
+				if (j == 0)
+					t_places[j] = places[i];
+			}
 			else 
 			{
 				t_places[j + 1] = places[i];
@@ -290,6 +344,17 @@ void show_menu(void)
 	printf("c) Показать список забронированных мест в алфавитном порядке\n");
 	printf("d) Забронировать место для пассажира\n");
 	printf("e) Снять броню с места\n");
+	printf("g) Подтвердить рейс\n");
+	printf("f) Перейти в главное меню\n");
+}
+
+void show_main_menu(void)
+{
+	printf("\nВыберите рейс:\n\n");
+	printf("a) Рейс 102\n");
+	printf("b) Рейс 311\n");
+	printf("c) Рейс 444\n");
+	printf("d) Рейс 519\n");
 	printf("f) Выйти из программы\n");
 }
 
@@ -303,5 +368,70 @@ void init_places(struct place * ptr)
 		(ptr + i)->confirm = 0;
 		(ptr + i)->fname[0] = '\0';
 		(ptr + i)->lname[0] = '\0';
+	}
+}
+
+void init_flights(struct flight * ptr)
+{
+	ptr->id = 102;
+	(ptr + 1)->id = 311;
+	(ptr + 2)->id = 444;
+	(ptr + 3)->id = 519;
+
+	for (int i = 0; i < MAXFLIGHTS; i++)
+		init_places(&(ptr + i)->places[0]);
+}
+
+void open_flight(struct flight * ptr)
+{
+	// указатель на фукнции
+	funcs[0] = show_count_free_places;
+	funcs[1] = show_free_places;
+	funcs[2] = reserve_place;
+	funcs[3] = confirm_place;
+	funcs[4] = unreserve_place;
+
+
+	char choice;
+	show_menu();
+
+	while (getchar() != '\n')
+		continue;
+
+	while ((choice = getchar()) != 'f') {
+
+		while (getchar() != '\n')
+			continue;
+
+		switch (choice)
+		{
+			case 'a':
+				(*funcs[0])(&(ptr->places[0]));
+				//show_count_free_places(&(ptr->places[0]));
+				break;
+			case 'b':
+				//show_free_places(&(ptr->places[0]));
+				(*funcs[1])(&(ptr->places[0]));
+				break;
+			case 'c':
+				show_reservationed_places(ptr->places);
+				break;
+			case 'd':
+				(*funcs[2])(&(ptr->places[0]));
+			//	reserve_place(&(ptr->places[0]));
+				break;
+			case 'g':
+				(*funcs[3])(&(ptr->places[0]));
+			//	confirm_place(&(ptr->places[0]));
+				break;
+			case 'e':
+				(*funcs[4])(&(ptr->places[0]));
+			//	unreserve_place(&(ptr->places[0]));
+				break;
+			default:
+				printf("Вопрос озадачил!\n");
+		}
+
+		show_menu();
 	}
 }
